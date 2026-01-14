@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIML & N8N Daily Task Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+        
+        .shake-anim {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.95); }
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .float-anim {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* Hide number spinner on input */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        /* Gradient Text */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(to right, #818cf8, #c084fc);
+        }
+    </style>
+</head>
+<body class="bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#0a0a0c] to-black text-gray-200 font-sans antialiased min-h-screen flex flex-col items-center justify-center p-4 selection:bg-indigo-500 selection:text-white">
+
+    <!-- Decorative Background Elements -->
+    <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600/10 rounded-full blur-[100px]"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="main-card" class="w-full max-w-sm bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] overflow-hidden relative float-anim transform transition-all duration-300 hover:shadow-indigo-500/10 hover:border-white/20">
+        
+        <!-- Header -->
+        <div class="pt-10 pb-6 px-8 text-center">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 mb-4 shadow-lg shadow-indigo-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold tracking-wider text-white mb-1">
+                AIML & N8N
+            </h1>
+            <p class="text-sm font-medium tracking-widest uppercase text-gray-400">Daily Task Access</p>
+        </div>
+
+        <!-- Content -->
+        <div class="p-8 pt-2">
+            
+            <!-- Default Access Form -->
+            <div id="access-form" class="space-y-6 transition-all duration-300">
+                <div class="relative group">
+                    <input 
+                        type="password" 
+                        id="pin-input" 
+                        inputmode="numeric" 
+                        maxlength="8" 
+                        placeholder="••••••••"
+                        class="w-full bg-black/20 border border-white/10 text-center text-3xl tracking-[0.5em] font-bold text-indigo-100 rounded-2xl py-5 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 focus:bg-black/40 transition-all placeholder:text-gray-700 placeholder:tracking-widest placeholder:text-2xl"
+                        autocomplete="off"
+                    >
+                    <!-- Status Indicator Line -->
+                    <div id="status-line" class="absolute bottom-0 left-4 right-4 h-0.5 bg-transparent transition-colors duration-300 rounded-full"></div>
+                </div>
+
+                <button 
+                    id="submit-btn"
+                    onclick="validatePin()"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-4 rounded-2xl transition-all duration-300 transform active:scale-[0.98] shadow-lg shadow-indigo-500/25 border border-white/10 uppercase tracking-wide text-sm"
+                >
+                    Authenticate
+                </button>
+                
+                <p id="feedback-msg" class="text-center text-xs h-4 text-rose-400 font-medium opacity-0 transition-opacity duration-200 tracking-wide">
+                    <!-- Dynamic Error Message -->
+                </p>
+            </div>
+
+            <!-- Lockout View (Hidden by default) -->
+            <div id="lockout-view" class="hidden space-y-8 text-center animate-fade-in py-4">
+                <div class="text-rose-400 relative">
+                    <!-- Glow effect behind icon -->
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-rose-500/20 rounded-full blur-xl"></div>
+                    
+                    <!-- Lock Icon with Interaction Handler -->
+                    <svg id="lock-icon" xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 cursor-pointer active:scale-90 transition-transform select-none relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h2 class="font-bold text-xl text-white mb-2">System Locked</h2>
+                    <p class="text-gray-400 text-sm leading-relaxed px-4">Maximum authentication attempts exceeded.<br>Automatic reset in <span class="text-rose-300">12 hours</span>.</p>
+                </div>
+
+                <a 
+                    id="whatsapp-link"
+                    href="#"
+                    target="_blank"
+                    class="flex items-center justify-center gap-3 w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-green-500/20 border border-white/10"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592z"/>
+                    </svg>
+                    Contact via WhatsApp
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="fixed bottom-6 text-gray-500/40 text-[10px] tracking-[0.2em] font-medium uppercase select-none pointer-events-none">
+        &copy; jeya studio
+    </div>
+
+    <script>
+        /**
+         * SECURITY NOTE:
+         * This uses basic client-side obfuscation (Base64).
+         * Real security requires server-side validation.
+         */
+
+        /* * --- HOW TO CHANGE PASSWORD & URL DAILY ---
+         * 1. Open this page in your browser.
+         * 2. Right-click anywhere and select "Inspect" or press F12.
+         * 3. Go to the "Console" tab.
+         * 4. Type: generateNewPinCode("YOUR_NEW_8_DIGIT_PIN")
+         * OR:   generateNewUrlCode("https://your-new-link.com")
+         * 5. The console will print the code for you.
+         * 6. Copy and replace the corresponding lines below.
+         */
+
+        // CONFIGURATION (CURRENT PIN: 20250101)
+        const _s1 = "MjAy";
+        const _s2 = "NTAxMDE=";
+        
+        // 2. TARGET URL: https://n8n.io (Example)
+        const _u1 = "aHR0cHM6Ly";
+        const _u2 = "9uOG4uaW8=";
+
+        // 3. WhatsApp Number: 1234567890
+        const _wa = "1234567890"; 
+        
+        // STATE MANAGEMENT
+        const MAX_ATTEMPTS = 2;
+        const LOCKOUT_HOURS = 12;
+        const STORAGE_KEY = "_secure_access_attempts";
+        const STORAGE_TIME_KEY = "_secure_access_lock_ts";
+
+        // DOM ELEMENTS
+        const pinInput = document.getElementById('pin-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const formView = document.getElementById('access-form');
+        const lockoutView = document.getElementById('lockout-view');
+        const waLink = document.getElementById('whatsapp-link');
+        const statusLine = document.getElementById('status-line');
+        const lockIcon = document.getElementById('lock-icon');
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLockout();
+            
+            // Set WhatsApp Link dynamically
+            waLink.href = `https://wa.me/${_wa}`;
+
+            // Allow "Enter" key to submit
+            pinInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') validatePin();
+            });
+
+            // Input formatting constraint (prevent non-digits)
+            pinInput.addEventListener('input', function (e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+
+            // --- TRIPLE TAP UNLOCK LOGIC ---
+            let tapCount = 0;
+            let lastTapTime = 0;
+            
+            if(lockIcon) {
+                lockIcon.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    const currentTime = new Date().getTime();
+                    const timeDiff = currentTime - lastTapTime;
+                    
+                    // Allow 500ms between taps (Quick taps)
+                    if (timeDiff < 500 && timeDiff > 0) {
+                        tapCount++;
+                    } else {
+                        tapCount = 1; // Reset to 1 (This is the first tap of a new sequence)
+                    }
+                    
+                    lastTapTime = currentTime;
+                    
+                    if (tapCount === 3) {
+                        // Success: 3 continuous taps
+                        tapCount = 0;
+                        
+                        // Visual feedback (Flash Green)
+                        lockIcon.style.transition = 'color 0.2s';
+                        lockIcon.style.color = '#4ade80'; 
+                        
+                        setTimeout(() => {
+                            forceUnlock();
+                            lockIcon.style.color = ''; 
+                        }, 300);
+                    }
+                });
+            }
+        });
+
+        // HELPER FUNCTION FOR YOU TO CHANGE PASSWORD
+        window.generateNewPinCode = function(newPin) {
+            if(!newPin || newPin.length !== 8) return console.warn("Please enter an 8-digit PIN.");
+            const encoded = btoa(newPin);
+            const part1 = encoded.substring(0, 4);
+            const part2 = encoded.substring(4);
+            console.log(`%cCOPY THESE LINES TO YOUR CODE:`, "color: #4ade80; font-weight: bold; font-size: 14px;");
+            console.log(`const _s1 = "${part1}";`);
+            console.log(`const _s2 = "${part2}";`);
+        };
+
+        // HELPER FUNCTION FOR YOU TO CHANGE URL
+        window.generateNewUrlCode = function(newUrl) {
+            if(!newUrl) return console.warn("Please enter a valid URL.");
+            const encoded = btoa(newUrl);
+            const splitIndex = Math.floor(encoded.length / 2);
+            const part1 = encoded.substring(0, splitIndex);
+            const part2 = encoded.substring(splitIndex);
+            console.log(`%cCOPY THESE LINES TO YOUR CODE:`, "color: #38bdf8; font-weight: bold; font-size: 14px;");
+            console.log(`const _u1 = "${part1}";`);
+            console.log(`const _u2 = "${part2}";`);
+        };
+
+        function getAttempts() {
+            return parseInt(localStorage.getItem(STORAGE_KEY) || '0');
+        }
+
+        function incrementAttempts() {
+            const current = getAttempts();
+            localStorage.setItem(STORAGE_KEY, current + 1);
+            return current + 1;
+        }
+
+        function checkLockout() {
+            // 1. Check for existing time-based lockout
+            const lockTime = localStorage.getItem(STORAGE_TIME_KEY);
+            
+            if (lockTime) {
+                const now = Date.now();
+                const timeDiff = now - parseInt(lockTime);
+                const twelveHoursMs = LOCKOUT_HOURS * 60 * 60 * 1000;
+
+                if (timeDiff > twelveHoursMs) {
+                    // Lockout expired - Reset everything
+                    localStorage.removeItem(STORAGE_KEY);
+                    localStorage.removeItem(STORAGE_TIME_KEY);
+                    return; // Access Allowed
+                } else {
+                    // Still locked
+                    lockUI(false); // false = don't update timestamp
+                    return;
+                }
+            }
+
+            // 2. Check attempt limits
+            const attempts = getAttempts();
+            if (attempts >= MAX_ATTEMPTS) {
+                lockUI(true); // true = start 12hr timer now
+            }
+        }
+
+        function lockUI(setTimestamp = false) {
+            if (setTimestamp) {
+                // Only set the timestamp if we are just now locking out
+                if (!localStorage.getItem(STORAGE_TIME_KEY)) {
+                    localStorage.setItem(STORAGE_TIME_KEY, Date.now().toString());
+                }
+            }
+
+            formView.classList.add('hidden');
+            lockoutView.classList.remove('hidden');
+            pinInput.disabled = true;
+            submitBtn.disabled = true;
+        }
+
+        function forceUnlock() {
+            // Clear storage
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(STORAGE_TIME_KEY);
+            
+            // Reset UI State
+            lockoutView.classList.add('hidden');
+            formView.classList.remove('hidden');
+            
+            // Re-enable inputs
+            pinInput.disabled = false;
+            submitBtn.disabled = false;
+            
+            // Clear and focus
+            pinInput.value = '';
+            feedbackMsg.classList.add('opacity-0');
+            
+            // Small delay to ensure view is rendered before focus
+            setTimeout(() => pinInput.focus(), 100);
+        }
+
+        function showError(msg) {
+            feedbackMsg.textContent = msg;
+            feedbackMsg.classList.remove('opacity-0');
+            
+            // Visual Shake
+            const card = document.getElementById('main-card');
+            card.classList.remove('shake-anim');
+            void card.offsetWidth; // Trigger reflow
+            card.classList.add('shake-anim');
+            
+            // Red Status Line
+            statusLine.classList.add('bg-rose-500');
+            setTimeout(() => statusLine.classList.remove('bg-rose-500'), 1000);
+        }
+
+        function validatePin() {
+            const userPin = pinInput.value;
+            
+            // Safety check before processing
+            if (localStorage.getItem(STORAGE_TIME_KEY) || getAttempts() >= MAX_ATTEMPTS) {
+                checkLockout();
+                return;
+            }
+
+            // 2. Basic Length Validation
+            if (userPin.length !== 8) {
+                showError("PIN must be 8 digits");
+                return;
+            }
+
+            // 3. Construct True PIN (Obfuscated)
+            const truePin = atob(_s1 + _s2);
+
+            // 4. Validate
+            if (userPin === truePin) {
+                // SUCCESS
+                handleSuccess();
+            } else {
+                // FAILURE
+                const newCount = incrementAttempts();
+                const remaining = MAX_ATTEMPTS - newCount;
+                
+                pinInput.value = ''; // Clear input
+                
+                if (remaining <= 0) {
+                    lockUI(true); // Lock and start timer
+                } else {
+                    showError(`Incorrect PIN. ${remaining} attempt remaining.`);
+                }
+            }
+        }
+
+        function handleSuccess() {
+            // UI Feedback
+            submitBtn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Verifying...
+            `;
+            submitBtn.classList.remove('bg-gradient-to-r', 'from-indigo-600', 'to-purple-600', 'hover:from-indigo-500', 'hover:to-purple-500');
+            submitBtn.classList.add('bg-green-500');
+            statusLine.classList.add('bg-green-500');
+            
+            // Construct URL (Obfuscated)
+            const target = atob(_u1 + _u2);
+
+            // Small delay for UX, then Redirect
+            setTimeout(() => {
+                window.location.href = target;
+            }, 800);
+        }
+    </script>
+</body>
+</html>
