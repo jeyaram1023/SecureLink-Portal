@@ -94,7 +94,8 @@ The project contains advanced security protections and animated UI effects.
 
 ## Secure Portal
 
-<img width="1180" height="935" alt="Screenshot 2026-05-12 222653" src="https://github.com/user-attachments/assets/5f291776-0792-454b-82d0-44557c157ecd" />
+<img width="1180" height="935" alt="Screenshot 2026-05-12 222653" src="https://github.com/user-attachments/assets/355deb68-2375-4616-82b3-e084e6c752f3" />
+
 
 
 ---
